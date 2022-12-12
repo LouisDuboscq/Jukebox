@@ -9,34 +9,15 @@ The focus is on flexibility to change loading, error and audio views.
 
 # Setup
 
-## 1 Gradle dependencies
+## Gradle dependencies
 
-```
-// Add Maven Central to your repositories if needed
-repositories {
-    mavenCentral()
-}
+``` 
+maven { url 'https://jitpack.io' }
 ```
 
 ```
-implementation "com.lduboscq.jukebox:$jukebox_version"
+implementation("com.github.LouisDuboscq:Jukebox:0.2")
 ```
-
-## Initialization 
-
-### You use Koin
-
-Load the jukebox module
-
-```
-    initKoin {
-        modules(appModule, jukeboxModule)
-    } 
-```
-
-### You do not use Koin
-
-TODO
 
 # What can I do with Jukebox
 
@@ -49,16 +30,19 @@ TODO
 ## Customize audio view : 
 
 ![jukebox custom](assets/jukebox_custom.png)
-
+ 
 ![circular and actions](assets/circular_and_actions.png)
+
+![custom_style](assets/custom_style.png)
 
 ## Customize loading view : 
 
-TODO
+![loading](assets/loading.png)
 
 ## Customize error view :
 
-TODO
+![custom_error](assets/custom_error.png)
+![error_404](assets/error_404.png)
 
 ## Call play and pause, the commands understood by Jukebox
 
