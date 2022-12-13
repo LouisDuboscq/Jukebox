@@ -48,6 +48,7 @@ fun JukeboxSample(uri: Uri, setNextUri: () -> Unit) {
     ) {
         Jukebox(
             uri = uri,
+            playWhenReady = true,
             commands = commands.receiveAsFlow(), // user clicks for play and pause
             onAudioListened = setNextUri, // in this sample, onAudioListened is just change uri to next mp3
             modifier = Modifier.padding(horizontal = 32.dp),
