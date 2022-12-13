@@ -47,3 +47,22 @@ implementation("com.github.LouisDuboscq:Jukebox:0.2")
 ## Call play and pause, the commands understood by Jukebox
 
 ![commands](assets/commands.png)
+
+## Set play when ready
+
+By default, Jukebox does not play your audio when the media player has finished preparing it.
+You can force him to play when it's ready :
+
+```
+Jukebox(
+    uri = uri,
+    playWhenReady = true,
+    commands = commands.receiveAsFlow()
+)
+```
+
+## Sample 
+
+[There's a sample to show you how to use Jukebox:](examples/src/main/java/com/lduboscq/jukeboxe/examples/JukeboxSample.kt)
+
+![sample](assets/sample.mov)

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.onEach
 fun Jukebox(
     uri: Uri,
     modifier: Modifier = Modifier,
+    playWhenReady: Boolean = false,
     onAudioListened: () -> Unit = { Log.d("AudioSlider", "onAudioListened") },
     onFileNotFound: () -> Unit = { Log.d("AudioSlider", "onFileNotFound") },
     commands: Flow<JukeboxViewModel.Commands>,
@@ -30,7 +31,7 @@ fun Jukebox(
     audioView: @Composable (JukeboxViewModel.State.Loaded, (Float) -> Unit) -> Unit =
         { state, onSeek -> DefaultAudioSliderView(state, onSeek) },
 ) {
-    val viewModel: JukeboxViewModel = viewModel()
+    val viewModel: JukeboxViewModel = viewModel(factory = JukeboxViewModelFactory(playWhenReady))
 
     LaunchedEffect(uri) { viewModel.initUri(uri) }
 

@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import java.io.IOException
 
-class JukeboxViewModel : ViewModel() {
+class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
 
     private val _state: MutableStateFlow<State> = MutableStateFlow(State.Loading)
     val state = _state.asStateFlow()
@@ -70,6 +70,9 @@ class JukeboxViewModel : ViewModel() {
 
             mediaPlayer.setOnPreparedListener { player ->
                 _state.value = State.Loaded(mediaPlayerDuration = mediaPlayer.duration)
+                if (playWhenReady) {
+                    play()
+                }
             }
             mediaPlayer.setOnCompletionListener {
                 _state.value = State.Loaded(
