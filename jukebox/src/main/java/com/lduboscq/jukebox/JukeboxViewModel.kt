@@ -104,18 +104,16 @@ class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
         mediaPlayer.start()
     }
 
-    /**
-     * @throws IllegalStateException if pause is not called in Loaded state
-     */
     fun pause() {
-        check(_state.value is State.Loaded)
-        refreshJob?.cancel()
-        try {
-            mediaPlayer.pause()
-        } catch (e: IllegalStateException) {
-            Log.e("ListenAudioViewModel", "pause $e")
+        if (_state.value is State.Loaded) {
+            refreshJob?.cancel()
+            try {
+                mediaPlayer.pause()
+            } catch (e: IllegalStateException) {
+                Log.e("ListenAudioViewModel", "pause $e")
+            }
+            _state.value = (_state.value as State.Loaded).copy(playingState = PlayingState.Pause)
         }
-        _state.value = (_state.value as State.Loaded).copy(playingState = PlayingState.Pause)
     }
 
     private fun resetToStart() {
