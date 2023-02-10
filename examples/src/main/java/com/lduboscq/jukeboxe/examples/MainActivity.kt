@@ -5,10 +5,18 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material.Button
+import androidx.compose.material.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 
 class MainActivity : ComponentActivity() {
 
@@ -16,24 +24,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            var itemPlaying by remember { mutableStateOf(0) }
-            var uri by remember { mutableStateOf(Uri.parse("https://filesamples.com/samples/audio/mp3/sample1.mp3")) }
+            var example by remember { mutableStateOf(1) }
 
-            JukeboxSample(
-                uri,
-                setNextUri = {
-                    if (itemPlaying < 3) itemPlaying += 1
-                    uri = Uri.parse(
-                        when (itemPlaying) {
-                            0 -> "https://filesamples.com/samples/audio/mp3/sample1.mp3"
-                            1 -> "https://filesamples.com/samples/audio/mp3/sample2.mp3"
-                            2 -> "https://filesamples.com/samples/audio/mp3/sample3.mp3"
-                            3 -> "https://filesamples.com/samples/audio/mp3/sample4.mp3"
-                            else -> throw IllegalAccessError()
-                        }
-                    )
-                    Log.d("MainActivity", "onAudioListened $itemPlaying $uri")
-                })
+            Column {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .wrapContentWidth(Alignment.CenterHorizontally)
+                ) {
+                    Button(onClick = { example = 1 }) {
+                        Text("One after the other")
+                    }
+                    Button(onClick = { example = 2 }) {
+                        Text("List")
+                    }
+                }
+
+                if (example == 1) {
+                    OneAfterTheOtherExample()
+                } else if (example == 2) {
+                    ListExample()
+                }
+            }
         }
     }
 }
