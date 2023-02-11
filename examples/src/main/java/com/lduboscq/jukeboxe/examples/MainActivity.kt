@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            var example by remember { mutableStateOf(1) }
+            var example by remember { mutableStateOf(2) }
 
             Column {
                 Row(

@@ -30,14 +30,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ListExample() {
-    Text(text = "List")
 
     val commands1: Channel<JukeboxViewModel.Commands> = Channel()
     val commands2: Channel<JukeboxViewModel.Commands> = Channel()
     val commands3: Channel<JukeboxViewModel.Commands> = Channel()
 
     Column {
-
         ListenAudioItem(
             "Audio 1",
             Uri.parse("https://filesamples.com/samples/audio/mp3/sample1.mp3"),

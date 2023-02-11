@@ -31,7 +31,9 @@ fun Jukebox(
     audioView: @Composable (JukeboxViewModel.State.Loaded, (Float) -> Unit) -> Unit =
         { state, onSeek -> DefaultAudioSliderView(state, onSeek) },
 ) {
-    val viewModel: JukeboxViewModel = viewModel(factory = JukeboxViewModelFactory(playWhenReady))
+    val viewModel: JukeboxViewModel = viewModel(key = uri.toString()) {
+        JukeboxViewModel(playWhenReady)
+    }
 
     LaunchedEffect(uri) { viewModel.initUri(uri) }
 
@@ -77,8 +79,9 @@ internal fun JukeboxContent(
     Box(modifier) {
         when (state) {
             is JukeboxViewModel.State.Loaded -> audioView(state, onSeek)
-            JukeboxViewModel.State.Loading -> loadingView()
+            JukeboxViewModel.State.Preparing -> loadingView()
             JukeboxViewModel.State.FileNotFound -> errorView()
+            JukeboxViewModel.State.None -> loadingView()
         }
     }
 }
