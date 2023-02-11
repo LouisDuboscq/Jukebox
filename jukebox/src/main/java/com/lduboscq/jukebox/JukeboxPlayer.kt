@@ -5,49 +5,65 @@ import android.net.Uri
 
 class JukeboxPlayer {
 
-    private val players: MutableMap<Uri, MediaPlayer> = mutableMapOf()
+    /**
+     * We keep track of datasourceSet and playerPrepared to have a better management of orientation change
+     */
+    data class MediaPlayerWithDataSet(
+        val mediaPlayer: MediaPlayer,
+        val datasourceSet: Boolean,
+        val playerPrepared: Boolean,
+    )
+
+    private val players: MutableMap<Uri, MediaPlayerWithDataSet> = mutableMapOf()
 
     fun reset(uri: Uri) {
-        players[uri]?.reset()
+        players[uri]?.mediaPlayer?.reset()
     }
 
     fun setDataSource(uri: Uri) {
         if (players[uri] == null) {
-            players[uri] = MediaPlayer()
+            players[uri] = MediaPlayerWithDataSet(MediaPlayer(), datasourceSet = false, playerPrepared = false)
         }
-        players[uri]?.setDataSource(uri.toString())
+
+        if (!players[uri]!!.datasourceSet) {
+            players[uri]?.mediaPlayer?.setDataSource(uri.toString())
+            players[uri] = players[uri]!!.copy(datasourceSet = true)
+        }
     }
 
     fun prepare(uri: Uri, onPrepared: (MediaPlayer) -> Unit) {
         val player = players[uri]
-        player?.setOnPreparedListener(onPrepared)
-        player?.prepareAsync()
+        player!!.mediaPlayer.setOnPreparedListener(onPrepared)
+        if (!players[uri]!!.playerPrepared) {
+            player.mediaPlayer.prepareAsync()
+            players[uri] = players[uri]!!.copy(playerPrepared = true)
+        }
     }
 
     fun setOnCompletionListener(uri: Uri, callback: (MediaPlayer) -> Unit) {
-        players[uri]?.setOnCompletionListener {
+        players[uri]?.mediaPlayer?.setOnCompletionListener {
             callback(it)
         }
     }
 
     fun start(uri: Uri) {
-        players[uri]?.start()
+        players[uri]?.mediaPlayer?.start()
     }
 
     fun currentPosition(uri: Uri): Int {
-        return players[uri]!!.currentPosition
+        return players[uri]!!.mediaPlayer.currentPosition
     }
 
     fun pause(uri: Uri) {
-        players[uri]?.pause()
+        players[uri]?.mediaPlayer?.pause()
     }
 
     fun seekTo(i: Int, uri: Uri) {
-        players[uri]?.seekTo(i)
+        players[uri]?.mediaPlayer?.seekTo(i)
     }
 
     fun stopAndRelease(uri: Uri) {
-        with(players[uri]!!) {
+        with(players[uri]!!.mediaPlayer) {
             stop()
             release()
         }
