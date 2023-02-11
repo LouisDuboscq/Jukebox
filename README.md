@@ -16,7 +16,7 @@ maven { url 'https://jitpack.io' }
 ```
 
 ```
-implementation("com.github.LouisDuboscq:Jukebox:v0.4")
+implementation("com.github.LouisDuboscq:Jukebox:0.5")
 ```
 
 # What can I do with Jukebox
