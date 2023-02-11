@@ -1,6 +1,5 @@
 package com.lduboscq.jukebox
 
-import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -17,12 +16,14 @@ import java.io.IOException
 
 class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
 
-    private val _state: MutableStateFlow<State> = MutableStateFlow(State.Loading)
+    private val _state: MutableStateFlow<State> = MutableStateFlow(State.None)
     val state = _state.asStateFlow()
 
-    private val mediaPlayer = MediaPlayer()
+    private val jukeboxPlayer = JukeboxPlayer()
 
     private var refreshJob: Job? = null
+
+    private lateinit var uri: Uri
 
     private val _effect: Channel<Effect> = Channel()
     val effect = _effect.receiveAsFlow()
@@ -33,7 +34,8 @@ class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
     }
 
     sealed interface State {
-        object Loading : State
+        object None : State
+        object Preparing : State
         object FileNotFound : State
 
         data class Loaded(
@@ -51,39 +53,59 @@ class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
         object Playing : PlayingState
     }
 
+    var uris = mutableListOf<Uri>()
     fun initUri(uri: Uri) {
-        Log.d("JukeboxViewModel", "uri : $uri")
-        mediaPlayer.reset()
-        viewModelScope.launch {
-            _state.value = State.Loading
-            try {
-                mediaPlayer.setDataSource(uri.toString())
-            } catch (e: FileNotFoundException) {
-                _effect.send(Effect.FileNotFound)
-                _state.value = State.FileNotFound
-                return@launch
-            } catch (e: IOException) {
-                _effect.send(Effect.FileNotFound)
-                _state.value = State.FileNotFound
-                return@launch
-            }
+        this.uri = uri
+        uris.add(uri)
 
-            mediaPlayer.setOnPreparedListener { player ->
-                _state.value = State.Loaded(mediaPlayerDuration = mediaPlayer.duration)
-                if (playWhenReady) {
-                    play()
-                }
+        try {
+            jukeboxPlayer.setDataSource(uri)
+        } catch (e: IllegalStateException) {
+            viewModelScope.launch { _effect.send(Effect.FileNotFound) }
+            _state.value = State.FileNotFound
+            return
+        }
+
+        jukeboxPlayer.prepare(uri) { player ->
+            _state.value = State.Loaded(mediaPlayerDuration = player.duration)
+        }
+
+        Log.d("JukeboxViewModel", "uri : $uri")
+    }
+
+    private suspend fun prepareMediaPlayer(startOnPrepared: Boolean) {
+        jukeboxPlayer.reset(uri)
+        _state.value = State.Preparing
+        try {
+            jukeboxPlayer.setDataSource(uri)
+        } catch (e: FileNotFoundException) {
+            _effect.send(Effect.FileNotFound)
+            _state.value = State.FileNotFound
+            return
+        } catch (e: IOException) {
+            _effect.send(Effect.FileNotFound)
+            _state.value = State.FileNotFound
+            return
+        }
+
+        jukeboxPlayer.prepare(uri) { player ->
+            _state.value = State.Loaded(mediaPlayerDuration = player.duration)
+            /*TODO if (playWhenReady) {
+                play()
+            }*/
+
+            if (startOnPrepared) {
+                play()
             }
-            mediaPlayer.setOnCompletionListener {
-                _state.value = State.Loaded(
-                    mediaPlayerDuration = mediaPlayer.duration,
-                    mediaPlayerPosition = 0,
-                    playingState = PlayingState.Pause
-                )
-                resetToStart()
-                viewModelScope.launch { _effect.send(Effect.AudioListened) }
-            }
-            mediaPlayer.prepareAsync()
+        }
+        jukeboxPlayer.setOnCompletionListener(uri) {
+            _state.value = State.Loaded(
+                mediaPlayerDuration = it.duration,
+                mediaPlayerPosition = 0,
+                playingState = PlayingState.Pause
+            )
+            resetToStart()
+            viewModelScope.launch { _effect.send(Effect.AudioListened) }
         }
     }
 
@@ -91,24 +113,35 @@ class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
      * @throws IllegalStateException if play is not called in Loaded state
      */
     fun play() {
-        require(_state.value is State.Loaded)
-        refreshJob = viewModelScope.launch {
-            while (true) {
-                _state.value = (_state.value as State.Loaded).copy(
-                    mediaPlayerPosition = mediaPlayer.currentPosition,
-                )
-                delay(1000)
+        fun startAndRefreshPosition() {
+            refreshJob = viewModelScope.launch {
+                while (true) {
+                    if (_state.value is State.Loaded) {
+                        _state.value = (_state.value as State.Loaded).copy(
+                            mediaPlayerPosition = jukeboxPlayer.currentPosition(uri),
+                        )
+                    }
+                    delay(1000)
+                }
             }
+            _state.value = (_state.value as State.Loaded).copy(playingState = PlayingState.Playing)
+            jukeboxPlayer.start(uri)
         }
-        _state.value = (_state.value as State.Loaded).copy(playingState = PlayingState.Playing)
-        mediaPlayer.start()
+
+        if (_state.value is State.None) {
+            viewModelScope.launch {
+                prepareMediaPlayer(true)
+            }
+        } else {
+            startAndRefreshPosition()
+        }
     }
 
     fun pause() {
         if (_state.value is State.Loaded) {
             refreshJob?.cancel()
             try {
-                mediaPlayer.pause()
+                jukeboxPlayer.pause(uri)
             } catch (e: IllegalStateException) {
                 Log.e("ListenAudioViewModel", "pause $e")
             }
@@ -119,7 +152,7 @@ class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
     private fun resetToStart() {
         check(_state.value is State.Loaded)
         refreshJob?.cancel()
-        mediaPlayer.seekTo(0)
+        jukeboxPlayer.seekTo(0, uri)
         _state.value = (_state.value as State.Loaded).copy(
             playingState = PlayingState.Pause,
             mediaPlayerPosition = 0,
@@ -132,15 +165,12 @@ class JukeboxViewModel(private val playWhenReady: Boolean) : ViewModel() {
     }
 
     private fun releaseMediaPlayer() {
-        with(mediaPlayer) {
-            stop()
-            release()
-        }
+        jukeboxPlayer.stopAndRelease(uri)
     }
 
     fun onSeek(sliderPosition: Float) {
         if (_state.value is State.Loaded) {
-            mediaPlayer.seekTo(sliderPosition.toInt())
+            jukeboxPlayer.seekTo(sliderPosition.toInt(), uri)
             _state.value = (_state.value as State.Loaded).copy(
                 mediaPlayerPosition = sliderPosition.toInt(),
             )
